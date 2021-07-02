@@ -20,13 +20,12 @@
  * Plugin Name: Kraken Image Optimizer
  * Plugin URI: http://wordpress.org/plugins/kraken-image-optimizer/
  * Description: This plugin allows you to optimize your WordPress images through the Kraken API, the world's most advanced image optimization solution.
- * Author: Karim Salman
- * Version: 2.6.3
- * Stable Tag: 2.6.3
+ * Author: Karim Salman, Modified by Mission Lab
+ * Version: 9.9.9
+ * Stable Tag: 2.6.5
  * Author URI: https://kraken.io
  * License GPL2
  */
-
 
 if ( !class_exists( 'Wp_Kraken' ) ) {
 
@@ -41,7 +40,7 @@ if ( !class_exists( 'Wp_Kraken' ) ) {
 
 		private $optimization_type = 'lossy';
 
-		public static $kraken_plugin_version = '2.6.3';
+		public static $kraken_plugin_version = '2.6.4';
 
 		function __construct() {
 			$plugin_dir_path = dirname( __FILE__ );
@@ -58,7 +57,7 @@ if ( !class_exists( 'Wp_Kraken' ) ) {
 			add_filter( 'plugin_action_links_' . plugin_basename(__FILE__), array( &$this, 'add_settings_link' ) );
 
 			if ( ( !empty( $this->kraken_settings ) && !empty( $this->kraken_settings['auto_optimize'] ) ) || !isset( $this->kraken_settings['auto_optimize'] ) ) {
-				add_action( 'add_attachment', array( &$this, 'kraken_media_uploader_callback' ) );			
+				add_action( 'add_attachment', array( &$this, 'kraken_media_uploader_callback' ), 15 ); // fire after DO Spaces			
 				add_filter( 'wp_generate_attachment_metadata', array( &$this, 'optimize_thumbnails' ) );
 			}
 
@@ -514,7 +513,7 @@ if ( !class_exists( 'Wp_Kraken' ) ) {
 
 				$settings = $this->kraken_settings;
 
-				$image_path = get_attached_file( $image_id );
+				$image_path = wp_get_attachment_url( $image_id );
 				$optimize_main_image = !empty( $settings['optimize_main_image'] );
 				$api_key = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
 				$api_secret = isset( $settings['api_secret'] ) ? $settings['api_secret'] : '';
@@ -548,8 +547,12 @@ if ( !class_exists( 'Wp_Kraken' ) ) {
 						// re-optimize thumbs if mode has changed
 						$kraked_thumbs_mode = $kraked_thumbs_data[0]['type'];						
 						if ( strcmp( $kraked_thumbs_mode, $this->optimization_type ) !== 0 ) {
-							wp_generate_attachment_metadata( $image_id, $image_path );
-							$this->optimize_thumbnails( $image_data );
+							$image_file = get_attached_file( $image_id );
+							
+							if ( file_exists( $image_file ) ) {
+								wp_generate_attachment_metadata( $image_id, $image_file );
+								$this->optimize_thumbnails( $image_data );
+							}
 						}
 					}
 
@@ -643,13 +646,7 @@ if ( !class_exists( 'Wp_Kraken' ) ) {
 
 			if ( wp_attachment_is_image( $image_id ) ) {
 
-				$image_path = get_attached_file( $image_id );
-				$image_backup_path = $image_path . '_kraken_' . md5( $image_path );
-				$backup_created = false;
-
-				if ( copy( $image_path, $image_backup_path ) ) {
-					$backup_created = true;
-				}
+				$image_path = wp_get_attachment_url( $image_id );
 
 				$resize = false;
 				if ( !empty( $settings['resize_width'] ) || !empty( $settings['resize_height'] ) ) {
@@ -657,32 +654,18 @@ if ( !class_exists( 'Wp_Kraken' ) ) {
 				}
 
 				// optimize backup image
-				if ( $backup_created ) {
-					$api_result = $this->optimize_image( $image_backup_path, $type, $resize );
-				} else {
-					$api_result = $this->optimize_image( $image_path, $type, $resize );
-				}				
+				$api_result = $this->optimize_image( $image_path, $type, $resize );
 
 				$data = array();
 
 				if ( !empty( $api_result ) && !empty( $api_result['success'] ) ) {
 					$data = $this->get_result_arr( $api_result, $image_id );
 					
-					if ( $backup_created ) {
-						$data['optimized_backup_file'] = $image_backup_path;
-						if ( $data['saved_bytes'] > 0 ) {
-							if ( $this->replace_image( $image_backup_path, $api_result['kraked_url'] ) ) {
-							} else {
-								error_log('Kraken.io: Could not replace local image with optimized image.');
-							}						
+					if ( $data['saved_bytes'] > 0 ) {
+						if ( $this->replace_image( $image_path, $api_result['kraked_url'] ) ) {
+						} else {
+							error_log('Kraken.io: Could not replace local image with optimized image.');
 						}						
-					} else {
-						if ( $data['saved_bytes'] > 0 ) {
-							if ( $this->replace_image( $image_path, $api_result['kraked_url'] ) ) {
-							} else {
-								error_log('Kraken.io: Could not replace local image with optimized image.');
-							}						
-						}
 					}
 					update_post_meta( $image_id, '_kraken_size', $data );
 
@@ -1024,8 +1007,10 @@ EOD;
 			$settings = $this->kraken_settings;
 			$optimize_main_image = !empty( $settings['optimize_main_image'] ); 
 
-			$file = get_attached_file( $id );
-			$original_size = filesize( $file );
+			$url = wp_get_attachment_url( $id );
+			$original_size = \StoryLoop\Util\Convenience::get_file_size( $url );
+//			$file = get_attached_file( $id );
+//			$original_size = filesize( $file );
 
 			// handle the case where file does not exist
 			if ( $original_size === 0 || $original_size === false ) {
@@ -1101,15 +1086,38 @@ EOD;
 			$result = curl_exec( $ch );
 
 			if ( $result ) {
-				$rv = file_put_contents( $image_path, $result );
+				
+				if ( class_exists( '\StoryLoop\Controllers\DOSpaces' ) ) {
+					$url_info = parse_url( $image_path );
+					$pathinfo = pathinfo( $url_info['path'] );
+					
+					// temp_path is the current uploads directory + the basename
+					$upload_dir = wp_upload_dir();
+					$temp_path  = $upload_dir['path'] . "/" . $pathinfo['basename'];
+					
+					// create the temp file
+					$rv = file_put_contents( $temp_path, $result );
+
+					if ( $rv ) {
+						$spaces = new \StoryLoop\Controllers\DOSpaces();
+						$return_value = $spaces->upload( $temp_path, preg_replace( "/^\//", "", $pathinfo['dirname'] ) );
+					} else {
+						// something went wrong.
+					}
+					
+				}
+				
+				
 			}
+			
+			
 			return $rv !== false;
 		}
 
 		function optimize_image( $image_path, $type, $resize = false ) {
 			$settings = $this->kraken_settings;
 			$kraken = new Kraken( $settings['api_key'], $settings['api_secret'] );
-
+ 
 			if ( !empty( $type ) ) {
 				$lossy = $type === 'lossy';
 			} else {
@@ -1117,7 +1125,7 @@ EOD;
 			}
 
 			$params = array(
-				'file' => $image_path,
+				'url' => $image_path,
 				'wait' => true,
 				'lossy' => $lossy,
 				'origin' => 'wp'
@@ -1168,7 +1176,7 @@ EOD;
 			}
 			
 			set_time_limit(400);
-			$data = $kraken->upload( $params );
+			$data = $kraken->url( $params );
 			$data['type'] = !empty( $type ) ? $type : $settings['api_lossy'];
 			return $data;
 		}
@@ -1195,16 +1203,6 @@ EOD;
 			}
 
 			$kraken_meta = get_post_meta( $image_id, '_kraken_size', true );
-			$image_backup_path = isset( $kraken_meta['optimized_backup_file'] ) ? $kraken_meta['optimized_backup_file'] : '';
-			
-			if ( $image_backup_path ) {
-				$original_image_path = get_attached_file( $image_id );				
-				if ( copy( $image_backup_path, $original_image_path ) ) {
-					unlink( $image_backup_path );
-					unset( $kraken_meta['optimized_backup_file'] );
-					update_post_meta( $image_id, '_kraken_size', $kraken_meta );
-				}
-			}
 
 			if ( !$this->preg_array_key_exists( '/^include_size_/', $this->kraken_settings ) ) {
 				
@@ -1245,7 +1243,7 @@ EOD;
 			$upload_dir = wp_upload_dir();
 
 			// all the way up to /uploads
-			$upload_base_path = $upload_dir['basedir'];
+			$upload_base_path = $upload_dir['baseurl'];
 			$upload_full_path = $upload_base_path . '/' . $upload_subdir;
 
 			$sizes = array();
@@ -1257,9 +1255,7 @@ EOD;
 			if ( !empty( $sizes ) ) {
 
 				$sizes_to_krak = $this->get_sizes_to_krak();
-				$thumb_path = '';
 				$thumbs_optimized_store = array();
-				$this_thumb = array();
 
 				foreach ( $sizes as $key => $size ) {
 
@@ -1269,7 +1265,7 @@ EOD;
 
 					$thumb_path = $upload_full_path . '/' . $size['file'];
 					
-					if ( file_exists( $thumb_path ) !== false ) {
+					if ( \StoryLoop\Util\Convenience::get_file_size( $thumb_path ) !== -1 ) {
 						$result = $this->optimize_image( $thumb_path, $this->optimization_type );
 						if ( !empty( $result ) && isset( $result['success'] ) && isset( $result['kraked_url'] ) ) {
 							$kraked_url = $result['kraked_url'];
