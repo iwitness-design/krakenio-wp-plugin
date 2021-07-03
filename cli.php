@@ -307,17 +307,6 @@ class WP_CLI_Kraken extends WP_CLI_Command {
 
 		$files = array();
 		$fileurl = wp_get_attachment_url( $attachment_id );
-
-		if ( get_post_meta( $attachment_id, '_kraken_size', true ) || get_post_meta( $attachment_id, '_kraked_thumbs', true ) ) {
-			$this->statistics['samesize'] ++;
-			
-			WP_CLI::line( sprintf(
-				'Skipping %s because it has already been compressed.',
-				get_the_title( $attachment_id )
-			) );
-			
-			return true;
-		}
 		
 		$title = [];
 		$post_id = $attachment_id;
@@ -329,6 +318,18 @@ class WP_CLI_Kraken extends WP_CLI_Command {
 		$title[] = get_the_title( $post_id );
 		
 		$title = implode( ' - ', array_reverse( $title ) );
+
+		if ( get_post_meta( $attachment_id, '_kraken_size', true ) || get_post_meta( $attachment_id, '_kraked_thumbs', true ) ) {
+			$this->statistics['samesize'] ++;
+			
+			WP_CLI::line( sprintf(
+				'%s has been skipped because it has already been compressed.',
+				$title
+			) );
+			
+			return true;
+		}
+		
 		$this->statistics[ 'attachments' ]++;
 
 		if ( $this->dryrun ) {
