@@ -458,4 +458,6 @@ class WP_CLI_Kraken extends WP_CLI_Command {
 }
 
 // register `media krake` command
-WP_CLI::add_command( 'media krake', 'WP_CLI_Kraken' );
+if ( defined( 'WP_CLI' ) && WP_CLI ) {
+	WP_CLI::add_command( 'media krake', 'WP_CLI_Kraken' );
+}
