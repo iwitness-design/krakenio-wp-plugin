@@ -324,7 +324,7 @@ class WP_CLI_Kraken extends WP_CLI_Command {
 			$this->statistics['samesize'] ++;
 			
 			WP_CLI::line( sprintf(
-				'%s has been skipped because it has already been compressed.',
+				'SKIPPED %s because it has already been compressed.',
 				$title
 			) );
 			
@@ -351,7 +351,7 @@ class WP_CLI_Kraken extends WP_CLI_Command {
 				$this->statistics['kraked'] ++;
 				
 				WP_CLI::line( sprintf( 
-					'Processed %s',
+					'PROCESSED %s',
 					$title
 				) );
 
