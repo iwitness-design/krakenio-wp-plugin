@@ -64,7 +64,11 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 		function __construct() {
 			$plugin_dir_path = dirname( __FILE__ );
 			require_once( $plugin_dir_path . '/lib/Kraken.php' );
-			require_once( $plugin_dir_path . '/cli.php' );
+			
+			if ( defined( 'WP_CLI' ) && WP_CLI ) {
+				require_once( $plugin_dir_path . '/cli.php' );
+			}
+			
 			$this->kraken_settings = get_option( '_kraken_options' );
 			$this->optimization_type = $this->kraken_settings['api_lossy'];
 			add_action( 'admin_enqueue_scripts', array( &$this, 'my_enqueue' ) );

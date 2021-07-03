@@ -1,4 +1,5 @@
 <?php
+
 /**
  * WP-CLI command to ptimize/compress WordPress image attachments
  * using the Kraken Image Optimizer API.
@@ -458,6 +459,4 @@ class WP_CLI_Kraken extends WP_CLI_Command {
 }
 
 // register `media krake` command
-if ( defined( 'WP_CLI' ) && WP_CLI ) {
-	WP_CLI::add_command( 'media krake', 'WP_CLI_Kraken' );
-}
+WP_CLI::add_command( 'media krake', 'WP_CLI_Kraken' );
