@@ -308,7 +308,7 @@ class WP_CLI_Kraken extends WP_CLI_Command {
 		$files = array();
 		$fileurl = wp_get_attachment_url( $attachment_id );
 
-		if ( get_post_meta( $attachment_id, '_kraken_size', true ) ) {
+		if ( get_post_meta( $attachment_id, '_kraken_size', true ) || get_post_meta( $attachment_id, '_kraked_thumbs', true ) ) {
 			$this->statistics['samesize'] ++;
 			
 			WP_CLI::line( sprintf(

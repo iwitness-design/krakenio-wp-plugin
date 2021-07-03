@@ -82,7 +82,7 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 
 			if ( ( !empty( $this->kraken_settings ) && !empty( $this->kraken_settings['auto_optimize'] ) ) || !isset( $this->kraken_settings['auto_optimize'] ) ) {
 				add_action( 'add_attachment', array( &$this, 'kraken_media_uploader_callback' ), 15 ); // fire after DO Spaces			
-				add_filter( 'wp_generate_attachment_metadata', array( &$this, 'optimize_thumbnails' ) );
+				add_filter( 'wp_generate_attachment_metadata', array( &$this, 'optimize_thumbnails' ), 25 );
 			}
 
 			// in case settings were not resaved after update
@@ -554,6 +554,33 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 					update_post_meta( $image_id, '_kraken_size', $data );
 					return array( 'error' => $data['error'] );
 				}
+				
+				// make sure we have metadata for this attachment
+				// get metadata for thumbnails. This will create thumbnails if they don't exist,
+				// it pulls the original image from DO, copies it locally, then creates thumbs
+				if ( ! $image_data = wp_get_attachment_metadata( $image_id ) ) {
+					remove_filter( 'wp_generate_attachment_metadata', array( &$this, 'optimize_thumbnails' ), 25 );
+					$url_info = parse_url( $image_path );
+					$pathinfo = pathinfo( $url_info['path'] );
+
+					// temp_path is the current uploads directory + the basename
+					$upload_dir = wp_upload_dir();
+					$temp_path  = trailingslashit( $upload_dir['basedir'] . '/thumbs' . $pathinfo['dirname'] );
+
+					if ( ! file_exists( $temp_path ) ) {
+						mkdir( $temp_path, 0755, true );
+					}
+
+					$temp_path .= $pathinfo['basename'];
+
+					$result = @file_get_contents( $image_path );
+
+					// create the temp file
+					$rv = file_put_contents( $temp_path, $result );
+
+					wp_generate_attachment_metadata( $image_id, $temp_path );
+					unlink( $temp_path );
+				}
 
 				if ( $optimize_main_image ) {
 
@@ -564,9 +591,6 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 					if ( !empty ( $kraked_thumbs_data ) ) {
 						$thumbs_optimized = true;
 					}
-
-					// get metadata for thumbnails
-					$image_data = wp_get_attachment_metadata( $image_id );
 
 					if ( !$thumbs_optimized ) {
 						$this->optimize_thumbnails( $image_data );
@@ -640,6 +664,7 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 						$data['thumbs_data'] = $kraked_thumbs_data;
 						$data['success'] = true;
 					}
+					
 					$data['html'] = $this->generate_stats_summary( $image_id );
 
 					return $data;
@@ -677,8 +702,8 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 			$type = $settings['api_lossy'];
 
 			if ( !$this->isApiActive() ) {
-				remove_filter( 'wp_generate_attachment_metadata', array( &$this, 'optimize_thumbnails') );
-				remove_action( 'add_attachment', array( &$this, 'kraken_media_uploader_callback' ) );
+				remove_filter( 'wp_generate_attachment_metadata', array( &$this, 'optimize_thumbnails'), 25 );
+				remove_action( 'add_attachment', array( &$this, 'kraken_media_uploader_callback' ), 15 );
 				return;
 			}
 
@@ -1140,7 +1165,9 @@ EOD;
 					} else {
 						// something went wrong.
 					}
-					
+
+					unlink( $temp_path );
+
 				}
 				
 				
@@ -1392,7 +1419,7 @@ EOD;
 
 			}
 
-			return $result;
+			return (int) $result;
 
 		}
 	}
