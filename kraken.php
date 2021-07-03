@@ -27,14 +27,15 @@
  * License GPL2
  */
 
-if ( !class_exists( 'Wp_Kraken' ) ) {
+
+if ( !class_exists( 'WP_Kraken' ) ) {
 
 	define( 'KRAKEN_DEV_MODE', false );
-	class Wp_Kraken {
+	class WP_Kraken {
 
 		private $id;
 
-		private $kraken_settings = array();
+		public $kraken_settings = array();
 
 		private $thumbs_data = array();
 
@@ -42,9 +43,28 @@ if ( !class_exists( 'Wp_Kraken' ) ) {
 
 		public static $kraken_plugin_version = '2.6.4';
 
+		/**
+		 * @var
+		 */
+		protected static $_instance;
+
+		/**
+		 * Only make one instance of the WP_Kraken
+		 *
+		 * @return WP_Kraken
+		 */
+		public static function get_instance() {
+			if ( ! self::$_instance instanceof WP_Kraken ) {
+				self::$_instance = new self();
+			}
+
+			return self::$_instance;
+		}		
+		
 		function __construct() {
 			$plugin_dir_path = dirname( __FILE__ );
 			require_once( $plugin_dir_path . '/lib/Kraken.php' );
+			require_once( $plugin_dir_path . '/cli.php' );
 			$this->kraken_settings = get_option( '_kraken_options' );
 			$this->optimization_type = $this->kraken_settings['api_lossy'];
 			add_action( 'admin_enqueue_scripts', array( &$this, 'my_enqueue' ) );
@@ -494,12 +514,17 @@ if ( !class_exists( 'Wp_Kraken' ) ) {
 			return $rv;		
 		}
 
-
 		/**
-		 *  Handles optimizing already-uploaded images in the  Media Library
+		 * Try to Kraken the provided attachment
+		 * 
+		 * @param $image_id
+		 *
+		 * @return array
+		 * @since  1.0.0
+		 *
+		 * @author Tanner Moushey
 		 */
-		function kraken_media_library_ajax_callback() {
-			$image_id = (int) $_POST['id'];
+		public function kraken_attachment( $image_id ) {
 			$type = false;
 
 			if ( isset( $_POST['type'] ) ) {
@@ -523,8 +548,7 @@ if ( !class_exists( 'Wp_Kraken' ) ) {
 				if ( empty( $api_key ) && empty( $api_secret ) ) {
 					$data['error'] = 'There is a problem with your credentials. Please check them in the Kraken.io settings section of Media Settings, and try again.';
 					update_post_meta( $image_id, '_kraken_size', $data );
-					echo json_encode( array( 'error' => $data['error'] ) );
-					exit;
+					return array( 'error' => $data['error'] );
 				}
 
 				if ( $optimize_main_image ) {
@@ -585,21 +609,20 @@ if ( !class_exists( 'Wp_Kraken' ) ) {
 							}
 
 							$data['html'] = $this->generate_stats_summary( $image_id );
-							echo json_encode( $data );
+							return $data;
 						
 						} else {
-							echo json_encode( array( 'error' => 'Could not overwrite original file. Please ensure that your files are writable by plugins.' ) );
-							exit;
+							return array( 'error' => 'Could not overwrite original file. Please ensure that your files are writable by plugins.' );
 						}	
 
 					} else {
 						// error or no optimization
-						if ( file_exists( $image_path ) ) {
+						if ( self::get_file_size( $image_path ) !== -1 ) {
 							update_post_meta( $image_id, '_kraken_size', $data );
 						} else {
 							// file not found
 						}
-						echo json_encode( array( 'error' => $api_result['message'], '' ) );
+						return array( 'error' => $api_result['message'], '' );
 					}
 				} else {
 					// get metadata for thumbnails
@@ -615,9 +638,20 @@ if ( !class_exists( 'Wp_Kraken' ) ) {
 					}
 					$data['html'] = $this->generate_stats_summary( $image_id );
 
-					echo json_encode( $data );
+					return $data;
 				}
-			}
+			}			
+		}
+		
+		/**
+		 *  Handles optimizing already-uploaded images in the  Media Library
+		 */
+		function kraken_media_library_ajax_callback() {
+			$image_id = (int) $_POST['id'];
+
+			$data = $this->kraken_attachment( $image_id );
+			
+			json_encode( $data );
 			wp_die();
 		}
 
@@ -671,9 +705,9 @@ if ( !class_exists( 'Wp_Kraken' ) ) {
 
 				} else {
 					// error or no optimization
-					if ( file_exists( $image_path ) ) {
+					if ( self::get_file_size( $image_path ) !== -1 ) {
 
-						$data['original_size'] = filesize( $image_path );
+						$data['original_size'] = self::get_file_size( $image_path );
 						$data['error'] = $api_result['message'];
 						$data['type'] = $api_result['type'];
 						update_post_meta( $image_id, '_kraken_size', $data );
@@ -1008,9 +1042,7 @@ EOD;
 			$optimize_main_image = !empty( $settings['optimize_main_image'] ); 
 
 			$url = wp_get_attachment_url( $id );
-			$original_size = \StoryLoop\Util\Convenience::get_file_size( $url );
-//			$file = get_attached_file( $id );
-//			$original_size = filesize( $file );
+			$original_size = self::get_file_size( $url );
 
 			// handle the case where file does not exist
 			if ( $original_size === 0 || $original_size === false ) {
@@ -1265,7 +1297,7 @@ EOD;
 
 					$thumb_path = $upload_full_path . '/' . $size['file'];
 					
-					if ( \StoryLoop\Util\Convenience::get_file_size( $thumb_path ) !== -1 ) {
+					if ( self::get_file_size( $thumb_path ) !== -1 ) {
 						$result = $this->optimize_image( $thumb_path, $this->optimization_type );
 						if ( !empty( $result ) && isset( $result['success'] ) && isset( $result['kraked_url'] ) ) {
 							$kraked_url = $result['kraked_url'];
@@ -1316,7 +1348,51 @@ EOD;
 		    $suffixes = array( ' bytes', 'KB', 'MB', 'GB', 'TB' );   
 		    return round( pow( 1024, $base - floor( $base ) ), $precision ) . $suffixes[floor( $base )];
 		}
-	}
-}
 
-new Wp_Kraken();
+		/**
+		 * Get the size of a remote file in bytes using the least amount of resources possible
+		 *
+		 * @param String $url The URL of the file to examine
+		 *
+		 * @return int
+		 * @author costmo
+		 */
+		public static function get_file_size( $url ) {
+
+			$result = - 1;
+
+			$curl = curl_init( $url );
+
+			// Issue a HEAD request and follow any redirects.
+			curl_setopt( $curl, CURLOPT_NOBODY, true );
+			curl_setopt( $curl, CURLOPT_HEADER, true );
+			curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+			curl_setopt( $curl, CURLOPT_FOLLOWLOCATION, true );
+
+			$data = curl_exec( $curl );
+			curl_close( $curl );
+
+			$status = "";
+
+			if ( $data ) {
+
+				if ( preg_match( "/^HTTP\/1\.[01] (\d\d\d)/", $data, $matches ) ) {
+					$status = (int) $matches[1];
+				}
+
+				if ( 200 == $status ) {
+					if ( preg_match( "/Content-Length: (\d+)/i", $data, $matches ) ) {
+						$result = (int) $matches[1];
+					}
+				}
+
+			}
+
+			return $result;
+
+		}
+	}
+	
+	WP_Kraken::get_instance();
+	
+}
