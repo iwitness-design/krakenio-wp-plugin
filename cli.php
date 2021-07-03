@@ -338,13 +338,9 @@ class WP_CLI_Kraken extends WP_CLI_Command {
 
 				$this->statistics['kraked'] ++;
 				
-				$this->statistics['size'] += absint( $result['original_size'] );
-				$this->statistics['saved'] += absint( $result['saved_bytes'] );
-				
 				WP_CLI::line( sprintf( 
-					'Processed %s, saved %s',
-					get_the_title( $attachment_id ),
-					$result[ 'savings_percent']
+					'Processed %s',
+					get_the_title( $attachment_id )
 				) );
 
 			} else {
