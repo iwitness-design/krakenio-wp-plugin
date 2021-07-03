@@ -579,7 +579,7 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 					$rv = file_put_contents( $temp_path, $result );
 
 					wp_generate_attachment_metadata( $image_id, $temp_path );
-					unlink( $temp_path );
+					@unlink( $temp_path );
 				}
 
 				if ( $optimize_main_image ) {
@@ -1166,7 +1166,7 @@ EOD;
 						// something went wrong.
 					}
 
-					unlink( $temp_path );
+					@unlink( $temp_path );
 
 				}
 				

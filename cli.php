@@ -319,12 +319,22 @@ class WP_CLI_Kraken extends WP_CLI_Command {
 			return true;
 		}
 		
+		$title = [];
+		$post_id = $attachment_id;
+		while( get_post( $post_id )->post_parent ) {
+			$title[] = get_the_title( $post_id );
+			$post_id = get_post( $post_id )->post_parent;
+		}
+
+		$title[] = get_the_title( $post_id );
+		
+		$title = implode( ' - ', array_reverse( $title ) );
 		$this->statistics[ 'attachments' ]++;
 
 		if ( $this->dryrun ) {
 			WP_CLI::line( sprintf(
 				'Dry run: %s, file size: %s, url: %s',
-				get_the_title( $attachment_id ),
+				$title,
 				WP_Kraken::get_file_size( $fileurl ),
 				$fileurl
 			) );
@@ -340,7 +350,7 @@ class WP_CLI_Kraken extends WP_CLI_Command {
 				
 				WP_CLI::line( sprintf( 
 					'Processed %s',
-					get_the_title( $attachment_id )
+					$title
 				) );
 
 			} else {
