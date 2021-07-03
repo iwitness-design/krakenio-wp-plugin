@@ -154,7 +154,8 @@ class WP_CLI_Kraken extends WP_CLI_Command {
 			'post_mime_type' => implode( ', ', $this->_parse_mime_types( $this->config[ 'types' ], true ) ),
 			'post_status' => 'any',
 			'posts_per_page' => -1,
-			'fields' => 'ids'
+			'fields' => 'ids',
+			'post_parent__not_in' => [ '0' ],
 		) );
 
 		// abort if no matching attachments are found
@@ -357,7 +358,7 @@ class WP_CLI_Kraken extends WP_CLI_Command {
 			} else {
 				$this->statistics['failed'] ++;
 				WP_CLI::warning( 'Unexpected response' );
-				WP_CLI::debug( $result );
+				WP_CLI::error_multi_line( $result );
 			}
 		}
 		
