@@ -335,10 +335,11 @@ class WP_CLI_Kraken extends WP_CLI_Command {
 
 		if ( $this->dryrun ) {
 			WP_CLI::line( sprintf(
-				'Dry run: %s, file size: %s, url: %s',
+				'Dry run: %s, file size: %s, url: %s, id: %s',
 				$title,
 				WP_Kraken::get_file_size( $fileurl ),
-				$fileurl
+				$fileurl,
+				$attachment_id
 			) );
 		} else {
 			$result = WP_Kraken::get_instance()->kraken_attachment( $attachment_id );
@@ -351,8 +352,9 @@ class WP_CLI_Kraken extends WP_CLI_Command {
 				$this->statistics['kraked'] ++;
 				
 				WP_CLI::line( sprintf( 
-					'PROCESSED %s',
-					$title
+					'PROCESSED %s, ID: %s',
+					$title,
+					$attachment_id
 				) );
 
 			} else {
