@@ -146,7 +146,37 @@ class WP_CLI_Kraken extends WP_CLI_Command {
 	 */
 	public function __invoke( array $args, array $assoc_args ) {
 
-		$this->_init_config( $assoc_args ); 
+		$this->_init_config( $assoc_args );
+		
+		// start product specific hack
+		$products = \StoryLoop\Models\Product::top_level_products();
+
+		$total = count( $products );
+		$counter = 0;
+		
+		// Iterate each product for its assets
+		foreach( $products as $post_id => $term_data ) {
+			$counter ++;
+			WP_CLI::line( sprintf( '**** PROCESSING %s, (%s of %s) ****', get_the_title( $post_id ), $counter, $total ) );
+			
+			foreach ($term_data as $term_tax_id => $asset_posts) {
+				foreach ($asset_posts as $asset_post) {
+					if ( ! $attachment_id = get_post_thumbnail_id( $asset_post->ID ) ) {
+						WP_CLI::line( sprintf( 'SKIPPED %s does not have a thumbnail', get_the_title( $asset_post->ID ) ) );
+					} else {
+						if ( ! $this->_check_image_sizes( $attachment_id ) ) {
+							$this->_show_report();
+							return; // limit has been reached
+						}
+					}
+				}
+			}			
+		}
+
+		$this->_show_report();
+
+		return;
+		
 		
 		$images = new WP_Query( array(
 			'post_type' => 'attachment',
