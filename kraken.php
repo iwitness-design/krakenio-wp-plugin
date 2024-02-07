@@ -59,16 +59,16 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 			}
 
 			return self::$_instance;
-		}		
-		
+		}
+
 		function __construct() {
 			$plugin_dir_path = dirname( __FILE__ );
 			require_once( $plugin_dir_path . '/lib/Kraken.php' );
-			
+
 			if ( defined( 'WP_CLI' ) && WP_CLI ) {
 				require_once( $plugin_dir_path . '/cli.php' );
 			}
-			
+
 			$this->kraken_settings = get_option( '_kraken_options' );
 			$this->optimization_type = $this->kraken_settings['api_lossy'];
 			add_action( 'admin_enqueue_scripts', array( &$this, 'my_enqueue' ) );
@@ -81,7 +81,7 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 			add_filter( 'plugin_action_links_' . plugin_basename(__FILE__), array( &$this, 'add_settings_link' ) );
 
 			if ( ( !empty( $this->kraken_settings ) && !empty( $this->kraken_settings['auto_optimize'] ) ) || !isset( $this->kraken_settings['auto_optimize'] ) ) {
-				add_action( 'add_attachment', array( &$this, 'kraken_media_uploader_callback' ), 15 ); // fire after DO Spaces			
+				add_action( 'add_attachment', array( &$this, 'kraken_media_uploader_callback' ), 15 ); // fire after DO Spaces
 				add_filter( 'wp_generate_attachment_metadata', array( &$this, 'optimize_thumbnails' ), 25 );
 			}
 
@@ -95,11 +95,11 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 				$this->kraken_settings["chroma"] = '4:2:0';
 			}
 
-			add_action( 'admin_menu', array( &$this, 'kraken_menu' ) );	
+			add_action( 'admin_menu', array( &$this, 'kraken_menu' ) );
 		}
 
 		function preg_array_key_exists( $pattern, $array ) {
-		    $keys = array_keys( $array );    
+		    $keys = array_keys( $array );
 		    return (int) preg_grep( $pattern,$keys );
 		}
 
@@ -110,7 +110,7 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 			if ( empty( $api_key ) || empty( $api_secret) ) {
 				return false;
 			}
-			return true;			
+			return true;
 		}
 
 		function kraken_menu() {
@@ -150,7 +150,7 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 			$resize_height = isset( $settings['resize_height'] ) ? $settings['resize_height'] : 0;
 			$jpeg_quality = isset( $settings['jpeg_quality'] ) ? $settings['jpeg_quality'] : 0;
 			$chroma_subsampling = isset( $settings['chroma'] ) ? $settings['chroma'] : '4:2:0';
-		
+
 			$sizes = array_keys($this->get_image_sizes());
 			foreach ($sizes as $size) {
 				$valid['include_size_' . $size] = isset( $settings['include_size_' . $size]) ? $settings['include_size_' . $size] : 1;
@@ -261,7 +261,7 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 						        <tr class="tip">
 						        	<td colspan="2">
 						        		<div>
-						        			You can restrict the maximum dimensions of image uploads by width and/or height.<br /> 
+						        			You can restrict the maximum dimensions of image uploads by width and/or height.<br />
 						        			It is especially useful if you wish to prevent unnecessarily large photos with extremely high resolutions from being uploaded, for example, <br />
 						        			photos shot with a recent-model iPhone. Note: you can restrict the dimenions by width, height, or both. A value of zero disables.
 						        		</div>
@@ -304,7 +304,7 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 						                <input style="margin-left:10px;" type="radio" id="kraken_chroma_422" name="_kraken_options[chroma]" value="4:2:2" <?php checked( '4:2:2', $chroma_subsampling, true ) ?>/>
 						                <label for="kraken_chroma_422">4:2:2</label>
 						                <input style="margin-left:10px;" type="radio" id="kraken_chroma_444" name="_kraken_options[chroma]" value="4:4:4" <?php checked( '4:4:4', $chroma_subsampling, true ) ?>/>
-						                <label for="kraken_chroma_444">4:4:4 (no subsampling)</label>						             
+						                <label for="kraken_chroma_444">4:4:4 (no subsampling)</label>
 						            </td>
 						        </tr>
 						        <tr class="tip">
@@ -315,7 +315,7 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 						        			(by setting it to <strong>4:4:4</strong>). More information can be found in our <a href="https://kraken.io/docs/chroma-subsampling" target="_blank">documentation</a>.
 						        		</div>
 						        	</td>
-						        </tr>						        					      
+						        </tr>
 						        <tr class="no-border">
 						        	<td class="krakenAdvancedSettings"><h3><span class="kraken-advanced-settings-label">Advanced Settings</span></h3></td>
 						        </tr>
@@ -336,7 +336,7 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 						            	<?php } ?>
      							        <?php } ?>
 						            </td>
-						        </tr>						        
+						        </tr>
 						        <tr class="kraken-advanced-settings">
 						            <th scope="row">Preserve EXIF Metadata:</th>
 						            <td>
@@ -371,8 +371,8 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 						        <tr class="tip">
 						        	<td colspan="2">
 						        		<div>
-						        			Checking this option will add a Reset button in the "Show Details" popup in the Kraken Stats column for each optimized image.<br /> 
-						        			Resetting an image will remove the Kraken.io metadata associated with it, effectively making your blog forget that it had been optimized in the first place, allowing further optimization in some cases.<br /> 
+						        			Checking this option will add a Reset button in the "Show Details" popup in the Kraken Stats column for each optimized image.<br />
+						        			Resetting an image will remove the Kraken.io metadata associated with it, effectively making your blog forget that it had been optimized in the first place, allowing further optimization in some cases.<br />
 						        			If an image has been optimized using the lossless setting, lossless optimization will not yield any greater savings. If in doubt, please contact support@kraken.io
 						        		</div>
 						        	</td>
@@ -392,7 +392,7 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 						        <tr class="tip">
 						        	<td colspan="2">
 						        		<div>
-						        			This settings defines how many images can be processed at the same time using the bulk optimizer. The recommended (and default) value is 4. <br /> 
+						        			This settings defines how many images can be processed at the same time using the bulk optimizer. The recommended (and default) value is 4. <br />
 						        			For blogs on very small hosting plans, or with reduced connectivity, a lower number might be necessary to avoid hitting request limits.
 						        		</div>
 						        	</td>
@@ -436,7 +436,7 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 			if ( empty( $input['api_key']) || empty( $input['api_secret'] ) ) {
 				$error[] = 'API Credentials must not be left blank.';
 			} else {
-			
+
 				$status = $this->get_api_status( $input['api_key'], $input['api_secret'] );
 
 				if ( $status !== false ) {
@@ -454,7 +454,7 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 
 				} else {
 					$error[] = 'Please enter a valid Kraken.io API key and secret.';
-				}			
+				}
 			}
 
 			if ( !empty( $error ) ) {
@@ -482,7 +482,7 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 					wp_enqueue_script( 'kraken-js', plugins_url( '/js/dist/kraken.min.js', __FILE__ ), array( 'jquery' ) );
 					wp_localize_script( 'kraken-js', 'ajax_object', array( 'ajax_url' => admin_url( 'admin-ajax.php' ) ) );
 					wp_localize_script( 'kraken-js', 'kraken_settings', $this->kraken_settings );
-					wp_enqueue_style( 'kraken-css', plugins_url( 'css/dist/kraken.min.css', __FILE__ ) );					
+					wp_enqueue_style( 'kraken-css', plugins_url( 'css/dist/kraken.min.css', __FILE__ ) );
 				}
 			}
 		}
@@ -515,12 +515,12 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 			}
 			$rv['success'] = $result['success'];
 			$rv['meta'] = wp_get_attachment_metadata( $image_id );
-			return $rv;		
+			return $rv;
 		}
 
 		/**
 		 * Try to Kraken the provided attachment
-		 * 
+		 *
 		 * @param $image_id
 		 *
 		 * @return array
@@ -554,7 +554,7 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 					update_post_meta( $image_id, '_kraken_size', $data );
 					return array( 'error' => $data['error'] );
 				}
-				
+
 				// make sure we have metadata for this attachment
 				// get metadata for thumbnails. This will create thumbnails if they don't exist,
 				// it pulls the original image from DO, copies it locally, then creates thumbs
@@ -587,7 +587,7 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 					// check if thumbs already optimized
 					$thumbs_optimized = false;
 					$kraked_thumbs_data = get_post_meta( $image_id, '_kraked_thumbs', true );
-					
+
 					if ( !empty ( $kraked_thumbs_data ) ) {
 						$thumbs_optimized = true;
 					}
@@ -597,10 +597,10 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 					} else {
 
 						// re-optimize thumbs if mode has changed
-						$kraked_thumbs_mode = $kraked_thumbs_data[0]['type'];						
+						$kraked_thumbs_mode = $kraked_thumbs_data[0]['type'];
 						if ( strcmp( $kraked_thumbs_mode, $this->optimization_type ) !== 0 ) {
 							$image_file = get_attached_file( $image_id );
-							
+
 							if ( file_exists( $image_file ) ) {
 								wp_generate_attachment_metadata( $image_id, $image_file );
 								$this->optimize_thumbnails( $image_data );
@@ -638,10 +638,10 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 
 							$data['html'] = $this->generate_stats_summary( $image_id );
 							return $data;
-						
+
 						} else {
 							return array( 'error' => 'Could not overwrite original file. Please ensure that your files are writable by plugins.' );
-						}	
+						}
 
 					} else {
 						// error or no optimization
@@ -664,14 +664,14 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 						$data['thumbs_data'] = $kraked_thumbs_data;
 						$data['success'] = true;
 					}
-					
+
 					$data['html'] = $this->generate_stats_summary( $image_id );
 
 					return $data;
 				}
-			}			
+			}
 		}
-		
+
 		/**
 		 *  Handles optimizing already-uploaded images in the  Media Library
 		 */
@@ -679,7 +679,7 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 			$image_id = (int) $_POST['id'];
 
 			$data = $this->kraken_attachment( $image_id );
-			
+
 			json_encode( $data );
 			wp_die();
 		}
@@ -723,12 +723,12 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 
 				if ( !empty( $api_result ) && !empty( $api_result['success'] ) ) {
 					$data = $this->get_result_arr( $api_result, $image_id );
-					
+
 					if ( $data['saved_bytes'] > 0 ) {
 						if ( $this->replace_image( $image_path, $api_result['kraked_url'] ) ) {
 						} else {
 							error_log('Kraken.io: Could not replace local image with optimized image.');
-						}						
+						}
 					}
 					update_post_meta( $image_id, '_kraken_size', $data );
 
@@ -753,7 +753,7 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 			$image_meta = get_post_meta( $image_id, '_kraken_size', true );
 			$original_size = self::formatBytes( filesize( get_attached_file( $image_id ) ) );
 			delete_post_meta( $image_id, '_kraken_size' );
-			delete_post_meta( $image_id, '_kraked_thumbs' );			
+			delete_post_meta( $image_id, '_kraked_thumbs' );
 			echo json_encode( array( 'success' => true, 'original_size' => $original_size, 'html' => $this->optimize_button_html( $image_id ) ) );
 			wp_die();
  		}
@@ -774,12 +774,12 @@ if ( !class_exists( 'WP_Kraken' ) ) {
 
 $html = <<<EOD
 	<div class="buttonWrap">
-		<button type="button" 
-				data-setting="$this->optimization_type" 
-				class="kraken_req" 
-				data-id="$id" 
-				id="krakenid-$id" 
-				data-filename="$filename" 
+		<button type="button"
+				data-setting="$this->optimization_type"
+				class="kraken_req"
+				data-id="$id"
+				id="krakenid-$id"
+				data-filename="$filename"
 				data-url="<$image_url">
 			Optimize This Image
 		</button>
@@ -913,11 +913,11 @@ EOD;
 					}
 				}
 
-				return array( 
+				return array(
 					'saved_bytes' => $saved_bytes,
-					'savings_percentage' => $savings_percentage 
+					'savings_percentage' => $savings_percentage
 				);
-			
+
 			} else if ( !empty( $meta ) ) {
 				$thumbs_count = count( $meta );
 				$total_thumb_byte_savings = 0;
@@ -937,9 +937,9 @@ EOD;
 				} else {
 					$total_thumbs_savings = '0 bytes';
 				}
-				return array( 
+				return array(
 					'savings_percentage' => $thumbs_savings_percentage,
-					'total_savings' => $total_thumbs_savings 
+					'total_savings' => $total_thumbs_savings
 				);
 			}
 		}
@@ -951,7 +951,7 @@ EOD;
 			$total_original_size = 0;
 			$total_kraked_size = 0;
 			$total_saved_bytes = 0;
-			
+
 			$total_savings_percentage = 0;
 
 			// crap for backward compat
@@ -975,7 +975,7 @@ EOD;
 				}
 
 				$total_kraked_size = $total_original_size - $total_saved_bytes;
-			} 
+			}
 
 			if ( !empty( $thumbs_meta ) ) {
 				$thumb_saved_bytes = 0;
@@ -1005,7 +1005,7 @@ EOD;
 		function results_html( $id ) {
 
 			$settings = $this->kraken_settings;
-			$optimize_main_image = !empty( $settings['optimize_main_image'] ); 
+			$optimize_main_image = !empty( $settings['optimize_main_image'] );
 
 			// get meta data for main post and thumbs
 			$image_meta = get_post_meta( $id, '_kraken_size', true );
@@ -1022,14 +1022,14 @@ EOD;
 				$kraked_size = isset( $image_meta['kraked_size'] ) ? $image_meta['kraked_size'] : '';
 				$savings_percentage = $image_meta['savings_percent'];
 				$main_image_kraked_stats = self::calculate_savings( $image_meta );
-			} 
+			}
 
 			if ( $thumbs_optimized ) {
 				$type = $thumbs_meta[0]['type'];
 				$thumbs_kraked_stats = self::calculate_savings( $thumbs_meta );
 				$thumbs_count = count( $thumbs_meta );
 			}
-			
+
 			ob_start();
 			?>
 				<?php if ( $main_image_optimized ) { ?>
@@ -1049,7 +1049,7 @@ EOD;
 				<br />
 				<span><strong>Optimization mode:</strong></span>
 				<br />
-				<span><?php echo ucfirst($type); ?></span>	
+				<span><?php echo ucfirst($type); ?></span>
 				<?php if ( !empty( $this->kraken_settings['show_reset'] ) ) { ?>
 					<br />
 					<small
@@ -1060,7 +1060,7 @@ EOD;
 					<span class="krakenSpinner"></span>
 				</div>
 				<?php } ?>
-			<?php 	
+			<?php
 			$html = ob_get_clean();
 			return $html;
 		}
@@ -1068,7 +1068,7 @@ EOD;
 		function fill_media_columns( $column_name, $id ) {
 
 			$settings = $this->kraken_settings;
-			$optimize_main_image = !empty( $settings['optimize_main_image'] ); 
+			$optimize_main_image = !empty( $settings['optimize_main_image'] );
 
 			$url = wp_get_attachment_url( $id );
 			$original_size = self::get_file_size( $url );
@@ -1078,9 +1078,9 @@ EOD;
 				echo '0 bytes';
 				return;
 			} else {
-				$original_size = self::formatBytes( $original_size );				
+				$original_size = self::formatBytes( $original_size );
 			}
-			
+
 			$type = isset( $settings['api_lossy'] ) ? $settings['api_lossy'] : 'lossy';
 
 			if ( strcmp( $column_name, 'original_size' ) === 0 ) {
@@ -1095,7 +1095,7 @@ EOD;
 						} else {
 							echo self::formatBytes( $meta['original_size'] );
 						}
-						
+
 					} else {
 						echo $original_size;
 					}
@@ -1141,21 +1141,21 @@ EOD;
 			curl_setopt( $ch, CURLOPT_RETURNTRANSFER, 1 );
 	        curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, 0 );
         	curl_setopt( $ch, CURLOPT_SSL_VERIFYHOST, 0 );
-        	curl_setopt( $ch, CURLOPT_CONNECTTIMEOUT, 0 ); 
-        	curl_setopt( $ch, CURLOPT_TIMEOUT, 120 );           	      
+        	curl_setopt( $ch, CURLOPT_CONNECTTIMEOUT, 0 );
+        	curl_setopt( $ch, CURLOPT_TIMEOUT, 600 );
             curl_setopt( $ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36' );
 			$result = curl_exec( $ch );
 
 			if ( $result ) {
-				
+
 				if ( class_exists( '\StoryLoop\Controllers\DOSpaces' ) ) {
 					$url_info = parse_url( $image_path );
 					$pathinfo = pathinfo( $url_info['path'] );
-					
+
 					// temp_path is the current uploads directory + the basename
 					$upload_dir = wp_upload_dir();
 					$temp_path  = $upload_dir['path'] . "/" . $pathinfo['basename'];
-					
+
 					// create the temp file
 					$rv = file_put_contents( $temp_path, $result );
 
@@ -1169,18 +1169,18 @@ EOD;
 					@unlink( $temp_path );
 
 				}
-				
-				
+
+
 			}
-			
-			
+
+
 			return $rv !== false;
 		}
 
 		function optimize_image( $image_path, $type, $resize = false ) {
 			$settings = $this->kraken_settings;
 			$kraken = new Kraken( $settings['api_key'], $settings['api_secret'] );
- 
+
 			if ( !empty( $type ) ) {
 				$lossy = $type === 'lossy';
 			} else {
@@ -1237,7 +1237,7 @@ EOD;
 			if ( isset( $settings['jpeg_quality'] ) && $settings['jpeg_quality'] > 0 ) {
 				$params['quality'] = (int) $settings['jpeg_quality'];
 			}
-			
+
 			set_time_limit(400);
 			$data = $kraken->url( $params );
 			$data['type'] = !empty( $type ) ? $type : $settings['api_lossy'];
@@ -1268,7 +1268,7 @@ EOD;
 			$kraken_meta = get_post_meta( $image_id, '_kraken_size', true );
 
 			if ( !$this->preg_array_key_exists( '/^include_size_/', $this->kraken_settings ) ) {
-				
+
 				global $_wp_additional_image_sizes;
 				$sizes = array();
 
@@ -1289,7 +1289,7 @@ EOD;
 				foreach ($sizes as $size) {
 					$this->kraken_settings['include_size_' . $size] = 1;
 				}
-			}			
+			}
 
 			// when resizing has taken place via API, update the post metadata accordingly
 			if ( !empty( $kraken_meta['kraked_width'] ) && !empty( $kraken_meta['kraked_height'] ) ) {
@@ -1327,7 +1327,7 @@ EOD;
 					}
 
 					$thumb_path = $upload_full_path . '/' . $size['file'];
-					
+
 					if ( self::get_file_size( $thumb_path ) !== -1 ) {
 						$result = $this->optimize_image( $thumb_path, $this->optimization_type );
 						if ( !empty( $result ) && isset( $result['success'] ) && isset( $result['kraked_url'] ) ) {
@@ -1339,9 +1339,9 @@ EOD;
 								}
 							} else {
 								$this_thumb = array( 'thumb' => $key, 'file' => $size['file'], 'original_size' => $result['original_size'], 'kraked_size' => $result['original_size'], 'type' => $this->optimization_type );
-								$thumbs_optimized_store [] = $this_thumb;								
+								$thumbs_optimized_store [] = $this_thumb;
 							}
-						} 
+						}
 					}
 				}
 			}
@@ -1376,7 +1376,7 @@ EOD;
 
 		static function formatBytes( $size, $precision = 2 ) {
 		    $base = log( $size, 1024 );
-		    $suffixes = array( ' bytes', 'KB', 'MB', 'GB', 'TB' );   
+		    $suffixes = array( ' bytes', 'KB', 'MB', 'GB', 'TB' );
 		    return round( pow( 1024, $base - floor( $base ) ), $precision ) . $suffixes[floor( $base )];
 		}
 
@@ -1407,13 +1407,14 @@ EOD;
 
 			if ( $data ) {
 
-				if ( preg_match( "/^HTTP\/1\.[01] (\d\d\d)/", $data, $matches ) ) {
-					$status = (int) $matches[1];
+				// Expects 'HTTP/1.0' or 'HTTP/1.1' or 'HTTP/2' followed by a space and a status code
+				if ( preg_match( "/^HTTP\/(1\.[01]|2) (\d\d\d)/", $data, $matches ) ) {
+					$status = (int) end( $matches );
 				}
 
 				if ( 200 == $status ) {
 					if ( preg_match( "/Content-Length: (\d+)/i", $data, $matches ) ) {
-						$result = (int) $matches[1];
+						$result = (int) end( $matches );
 					}
 				}
 
@@ -1423,7 +1424,7 @@ EOD;
 
 		}
 	}
-	
+
 	WP_Kraken::get_instance();
-	
+
 }
